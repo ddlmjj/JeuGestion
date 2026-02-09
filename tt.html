@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      display: flex;
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    #menu_bat {
+      width: 200px;
+      background: #222;
+      color: white;
+      height: 100%;
+      padding: 10px;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    .batiment {
+      width: 80px;
+      height: 80px;
+    }
+
+    #batiment {
+      width: 80px;
+      height: 80px;
+      background: #474747;
+      margin-bottom: 10px;
+      cursor: grab;
+      background-size: 80px;
+
+    }
+    
+    #menu-ressource {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 600px;
+      border-bottom-left-radius: 10px;
+      background-color: #222;
+      height: 50px;
+      align-items: center;
+      gap: 20px;
+      display: flex;
+      color: white;
+    }
+    .icon {
+      width: 24px;
+      height: 24px;
+      
+    }
+
+
+    canvas {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+  
+    <div id="menu-ressource">
+     
+
+    </div>
+  </div>
+  <div id="menu_bat">
+    <p>Bâtiments</p>
+    
+  </div>
+
+  <canvas id="game" width="800" height="520"></canvas>
+
+  <script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const ImageHerbe = new Image();
+const BatimentPrincipale = new Image();
+const sol2 = new Image();
+sol2.src = "./test.png"
+const Batiment2 = new Image();
+Batiment2.src = "./tower.png"
+
+BatimentPrincipale.src="./batiment1.png"
+ImageHerbe.src = "./herbe.png"
+
+const ressource = ["piece", "bois", "fer", "soldat"]
+const batiment = {
+  base: {
+    prix: [50],
+    sol: "herbe",
+    image: "./baselvl1.png",
+    production: []
+  },
+  crystal: {
+    prix: [100],
+    sol: "herbe",
+    image: "./tower.png",
+    production: [10]
+  },
+  bucherie: {
+    prix: [200],
+    sol: "foret",
+    image: "./batiment3.png",
+    production: [0, 5]
+  },
+  forge: {
+    prix: [200, 50],
+    sol: "pierre",
+    image: "./batiment4.png",
+    production: [0, 0, 1]
+  },
+  moulin: {
+    prix: [200, 75],
+    sol: "pierre",
+    image: "./moulin.png",
+    production: [0, 20, 0]
+  },
+  soldat_tour : {
+      prix: [0,0,20],
+      sol: "pierre",
+      image: "./soldat_tour.png",
+      production: [0,0,0, 1],
+    }
+
+}
+
+const data_joueur = {
+  ressource: [1000, 500, 500, 0]
+
+}
+
+
+let CELL_SIZE = 175;
+let menu = [];
+let units = [];
+let bat2 = [];
+let dragging = false;
+let nomBat = "None";
+
+for (const cle in batiment) {
+  prix = ""
+  for (let i=0; i<batiment[cle].prix.length; i++) {
+    prix += `<p>${batiment[cle].prix[i]}</p><img src="icon_${ressource[i]}.png" alt="icone" class="icon">`
+  }
+  document.getElementById("menu_bat").innerHTML += `
+    <div class="item" id="batiment" draggable="true" data-type="${cle}" style="background-image: url('${batiment[cle].image}');"></div>
+    <div style="align-items: center; display: flex; gap: 5px">
+        ${prix}
+    </div>
+    <br>`
+}
+
+for (let i=0; i<data_joueur.ressource.length; i++) {
+  document.getElementById("menu-ressource").innerHTML += `
+  <p id="compteur-${ressource[i]}" style="margin-left: 10%;">${data_joueur.ressource[i]}</p>
+  <img src="icon_${ressource[i]}.png" alt="icone" class="icon">`
+}
+
+
+
+// ======================
+// UTILS
+// ======================
+function snapToGrid(value) {
+  return Math.floor(value / CELL_SIZE) * CELL_SIZE;
+}
+
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth*3 - window.innerWidth*3%100;
+  canvas.height = window.innerHeight*3 -  window.innerHeight*3%100;
+}
+
+function getGridSize() {
+  return {
+    cols: Math.floor(canvas.width / CELL_SIZE),
+    rows: Math.floor(canvas.height / CELL_SIZE)
+  };
+}
+
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// ======================
+// DRAW
+// ======================
+function drawMenu() {
+  const img = new Image();
+  menu.forEach(m => {
+
+    img.src = m.src
+    ctx.drawImage(img, m.x-CELL_SIZE*2, m.y-CELL_SIZE, CELL_SIZE*2, CELL_SIZE*2);
+  })
+}
+function drawGround() {
+  const img = new Image();
+  img.src = "./herbe.png"
+  
+  
+  units.forEach(u => {
+    const coordbase = [u.x-CELL_SIZE*2, u.y-CELL_SIZE]
+    for (let i=0; i<5; i++) {
+      for (let j=0; j<5; j++) {
+        ctx.drawImage(img, coordbase[0]+((j+(i%2)/2) * CELL_SIZE), coordbase[1]+(i * CELL_SIZE)/2, CELL_SIZE, CELL_SIZE)
+      }
+    }
+  })
+}
+const { cols, rows } = getGridSize();
+let sol = []
+for (let y = 0; y < rows*2; y++) {
+    sol.push([])
+    for (let x = 0; x < cols; x++) {
+      sol[y].push("test")
+    }}
+
+
+
+function drawMap() {
+  
+const SolDeBase = new Image();
+
+  for (let y = 0; y < sol.length; y++) {
+    for (let x = 0; x < sol[y].length; x++) {
+      SolDeBase.src = `./${sol[y][x]}.png`
+      ctx.drawImage(
+        SolDeBase,
+        ((x+(y%2)/2) * CELL_SIZE),
+        (y * CELL_SIZE)/2,
+        CELL_SIZE,
+        CELL_SIZE
+      );
+    }
+  }
+}
+
+
+function drawGrid() {
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  for (let x = 0; x < canvas.width; x += CELL_SIZE) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < canvas.height; y += CELL_SIZE) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawUnits() {
+  ctx.fillStyle = "blue";
+  const img = new Image();
+  const img2 = new Image();
+  let coord_coin = 0
+  
+  units.forEach(u => {
+    
+    
+    const solImages = [];
+
+   
+   
+    img.src = batiment[u.src].image
+    
+    ctx.drawImage(img, u.x, u.y-(CELL_SIZE/2.5), CELL_SIZE, CELL_SIZE+(CELL_SIZE/4));
+  });
+  
+}
+
+// ======================
+// GAME LOOP
+// ======================
+function loop() {
+  drawMap();
+  //drawGround();
+  drawUnits();
+  //drawGrid();
+  drawMenu();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ======================
+// DRAG & DROP
+// ======================
+const items = document.getElementsByClassName("item");
+Array.from(items).forEach(item => {
+  console.log(item)
+  item.addEventListener("dragstart", (e) => {
+    dragging = true;
+    nomBat = e.target.dataset.type;
+  });
+})
+
+
+canvas.addEventListener("dragover", e => {
+  e.preventDefault();
+});
+
+canvas.addEventListener("drop", e => {
+  if (!dragging) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const x = snapToGrid(mouseX);
+  const y = snapToGrid(mouseY);
+  const ancienne_data = data_joueur.ressource
+  let payer = true
+  for (let i=0; i<batiment[nomBat].prix.length; i++) {
+    if (batiment[nomBat].prix[i] > data_joueur.ressource[i]) {
+      payer = false
+    } else {
+      data_joueur.ressource[i] -= batiment[nomBat].prix[i]
+    }
+  }
+  if (payer) {
+    add_sol(x, y)
+    units.unshift({ x, y, src: nomBat});
+  } else {
+    data_joueur.ressource = ancienne_data
+  }
+  refreshRessource()
+  
+  
+  dragging = false;
+  nomBat = "None";
+
+});
+
+function add_sol(x, y) {
+  console.log(Math.floor(y/CELL_SIZE)*2, Math.floor(x/CELL_SIZE))
+  const coordbase = [(Math.floor(y/CELL_SIZE)-1)*2, Math.floor(x/CELL_SIZE)-2]
+    for (let i=0; i<10; i++) {
+      for (let j=0; j<5; j++) {
+        sol[Math.floor(coordbase[0]+(i)/2)][coordbase[1]+((j+(i%2)/2))] = "herbe"
+      }
+    }
+}
+
+function refreshRessource() {
+  for (let i=0; i<data_joueur.ressource.length; i++) {
+    
+    document.getElementById(`compteur-${ressource[i]}`).innerHTML = data_joueur.ressource[i]
+  }
+}
+
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const clickedUnit = getUnitAt(mouseX, mouseY);
+
+  if (clickedUnit) {
+    showBuildingMenu(clickedUnit);
+  }
+});
+
+function getUnitAt(mouseX, mouseY) {
+  return units.find(u =>
+    mouseX >= u.x &&
+    mouseX <= u.x + CELL_SIZE &&
+    mouseY >= u.y &&
+    mouseY <= u.y + CELL_SIZE
+  );
+}
+
+function showBuildingMenu(unit) {
+  CELL_SIZE = 200
+  const menu = document.getElementById("menu-selection");
+  menu.classList.remove("hidden");
+
+  menu.innerHTML = `
+    <h3>Bâtiment</h3>
+    <p>Type : ${unit.src}</p>
+    <button onclick="upgrade()">Améliorer</button>
+    <button onclick="destroy()">Détruire</button>
+  `;
+}
+
+function production() {
+  units.forEach(u => {
+   for (let i=0; i<batiment[u.src].production.length; i++) {
+    data_joueur.ressource[i] += batiment[u.src].production[i]
+    refreshRessource()
+   }
+  })
+}
+
+setInterval(production, 2000)
+
+
+
+  </script>
+</body>
+</html>
+
+
+ 
