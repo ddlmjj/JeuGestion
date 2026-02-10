@@ -166,7 +166,7 @@ for (let i=0; i<data_joueur.ressource.length; i++) {
 // UTILS
 // ======================
 function snapToGrid(value) {
-  return Math.floor(value / CELL_SIZE/2) * CELL_SIZE/2;
+  return Math.floor(value /( CELL_SIZE/2) )* CELL_SIZE/2;
 }
 
 
@@ -408,4 +408,5 @@ setInterval(production, 2000)
 
 
  
+
 
